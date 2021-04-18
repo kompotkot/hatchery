@@ -1,0 +1,9 @@
+[Unit]
+Description=Monitor changes at /srv/git
+
+[Path]
+PathModified=/home/ubuntu/srv/git/
+Unit=gitmonitor.service
+
+[Install]
+WantedBy=multi-user.target

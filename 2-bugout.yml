@@ -1,0 +1,122 @@
+---
+- name: Install git server
+  hosts: machines
+  remote_user: ubuntu
+  vars_prompt:
+    - name: bugout_token
+      prompt: "Type bugout token"
+    - name: bugout_journal_id
+      prompt: "Type bugout journal id"
+      private: no
+    - name: bugout_entry_id
+      prompt: "Type bugout entry id for common git server status"
+      private: no
+  tasks:
+    # Prepare Bugout app
+    - name: Update and upgrade apt packages
+      become: yes
+      apt:
+        update_cache: yes
+        upgrade: yes
+    - name: Ensure apt packages required for bugout
+      become: yes
+      apt:
+        name:
+          - jq
+          - zip
+          - unzip
+    - name: Create playbook state directory
+      file:
+        path: /home/ubuntu/setup_state
+        state: directory
+    - name: Download Bugout Go
+      become: yes
+      get_url:
+        url: https://github.com/bugout-dev/bugout-go/releases/download/v0.3.2/bugout-linux-amd64.zip
+        dest: /home/ubuntu/setup_state/bugout.zip
+    - name: Unzip bugout
+      become: yes
+      unarchive:
+        src: /home/ubuntu/setup_state/bugout.zip
+        remote_src: yes
+        dest: /home/ubuntu/setup_state
+        extra_opts: -j
+    - name: Copy bugout to /usr/local/bin/bugout
+      become: yes
+      copy:
+        src: /home/ubuntu/setup_state/bugout
+        dest: /usr/local/bin/bugout
+        remote_src: yes
+        mode: a+x
+    - name: Recursively remove playbook state directory
+      file:
+        path: /home/ubuntu/setup_state
+        state: absent
+    # Prepare gitmonitor script and environment files
+    - name: Create gitmonitor directory
+      file:
+        path: /home/ubuntu/gitmonitor
+        state: directory
+    - name: Copy gitmonitor.bash file
+      copy:
+        src: files/gitmonitor.bash
+        dest: /home/ubuntu/gitmonitor/gitmonitor.bash
+        mode: 0740
+    - name: Copy .env file
+      copy:
+        src: files/.env
+        dest: /home/ubuntu/gitmonitor/.env
+        mode: 0640
+    - name: Replace BUGOUT_GITMONITOR_TOKEN in .env
+      lineinfile:
+        path: /home/ubuntu/gitmonitor/.env
+        regexp: 'BUGOUT_GITMONITOR_TOKEN=""'
+        line: 'BUGOUT_GITMONITOR_TOKEN="{{ bugout_token }}"'
+    - name: Replace BUGOUT_GITMONITOR_JOURNAL_ID in .env
+      lineinfile:
+        path: /home/ubuntu/gitmonitor/.env
+        regexp: 'BUGOUT_GITMONITOR_JOURNAL_ID=""'
+        line: 'BUGOUT_GITMONITOR_JOURNAL_ID="{{ bugout_journal_id }}"'
+    - name: Replace BUGOUT_GITMONITOR_ENTRY_ID in .env
+      lineinfile:
+        path: /home/ubuntu/gitmonitor/.env
+        regexp: 'BUGOUT_GITMONITOR_ENTRY_ID=""'
+        line: 'BUGOUT_GITMONITOR_ENTRY_ID="{{ bugout_entry_id }}"'
+    # Prepare gitmonitor service
+    - name: Copy gitmonitor.service file
+      become: yes
+      copy:
+        src: files/gitmonitor.service
+        dest: /etc/systemd/system/gitmonitor.service
+        mode: 644
+    - name: Copy gitmonitor.path file
+      become: yes
+      copy:
+        src: files/gitmonitor.path
+        dest: /etc/systemd/system/gitmonitor.path
+        mode: 644
+    - name: Copy gitmonitor.timer file
+      become: yes
+      copy:
+        src: files/gitmonitor.timer
+        dest: /etc/systemd/system/gitmonitor.timer
+        mode: 644
+    # - name: Restart path, also issue daemon-reload to pick up config changes
+    #   become: yes
+    #   systemd:
+    #     state: restarted
+    #     enabled: yes
+    #     daemon_reload: yes
+    #     name: gitmonitor.path
+    # - name: Restart timer, also issue daemon-reload to pick up config changes
+    #   become: yes
+    #   systemd:
+    #     state: restarted
+    #     enabled: yes
+    #     name: gitmonitor.timer
+    # - name: Restart service, also issue daemon-reload to pick up config changes
+    #   become: yes
+    #   systemd:
+    #     state: restarted
+    #     enabled: yes
+    #     name: gitmonitor.service

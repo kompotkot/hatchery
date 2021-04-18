@@ -1,0 +1,12 @@
+[Unit]
+Description=Monitor changes at /srv/git
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/ubuntu/gitmonitor
+EnvironmentFile=/home/ubuntu/gitmonitor/.env
+ExecStart=/home/ubuntu/gitmonitor/gitmonitor.bash
+SyslogIdentifier=gitmonitor
+
+[Install]
+WantedBy=multi-user.target

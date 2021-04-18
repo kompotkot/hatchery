@@ -1,0 +1,9 @@
+[Unit]
+Description=Check repositories changes at /srv/git every 15 seconds
+
+[Timer]
+OnBootSec=10s
+OnUnitActiveSec=15s
+
+[Install]
+WantedBy=timers.target
