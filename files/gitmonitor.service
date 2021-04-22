@@ -3,9 +3,9 @@ Description=Monitor changes at /srv/git
 
 [Service]
 Type=oneshot
-WorkingDirectory=/home/ubuntu/gitmonitor
-EnvironmentFile=/home/ubuntu/gitmonitor/.env
-ExecStart=/home/ubuntu/gitmonitor/gitmonitor.bash
+WorkingDirectory=/etc/gitmonitor
+EnvironmentFile=/etc/gitmonitor/.env
+ExecStart=/etc/gitmonitor/gitmonitor.bash
 SyslogIdentifier=gitmonitor
 
 [Install]

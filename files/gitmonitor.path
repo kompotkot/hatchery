@@ -2,7 +2,7 @@
 Description=Monitor changes at /srv/git
 
 [Path]
-PathModified=/home/ubuntu/srv/git/
+PathModified=/srv/git/
 Unit=gitmonitor.service
 
 [Install]
