@@ -1,0 +1,44 @@
+---
+- name: Install git server
+  hosts: machines
+  remote_user: ubuntu
+  tasks:
+    # Prepare Bugout app
+    - name: Update and upgrade apt packages
+      become: yes
+      apt:
+        update_cache: yes
+        upgrade: yes
+    - name: Ensure apt packages required for bugout
+      become: yes
+      apt:
+        name:
+          - zip
+          - unzip
+    - name: Create playbook state directory
+      file:
+        path: /tmp/setup_state
+        state: directory
+    - name: Download Bugout Go
+      become: yes
+      get_url:
+        url: https://github.com/bugout-dev/bugout-go/releases/download/v0.3.2/bugout-linux-amd64.zip
+        dest: /tmp/setup_state/bugout.zip
+    - name: Unzip bugout
+      become: yes
+      unarchive:
+        src: /tmp/setup_state/bugout.zip
+        remote_src: yes
+        dest: /tmp/setup_state
+        extra_opts: -j
+    - name: Copy bugout to /usr/local/bin/bugout
+      become: yes
+      copy:
+        src: /tmp/setup_state/bugout
+        dest: /usr/local/bin/bugout
+        remote_src: yes
+        mode: a+x
+    - name: Recursively remove playbook state directory
+      file:
+        path: /tmp/setup_state
+        state: absent
