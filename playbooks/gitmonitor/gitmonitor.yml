@@ -12,9 +12,6 @@
     - name: bugout_journal_id
       prompt: "Type bugout journal id"
       private: no
-    - name: bugout_entry_id
-      prompt: "Type bugout entry id for common git server status"
-      private: no
   tasks:
     - name: Update and upgrade apt packages
       become: yes
@@ -25,6 +22,7 @@
       become: yes
       apt:
         name:
+          - acl
           - git
           - jq
           - zip
@@ -122,12 +120,6 @@
         path: /etc/gitmonitor/.env
         regexp: 'BUGOUT_GITMONITOR_JOURNAL_ID=""'
         line: 'BUGOUT_GITMONITOR_JOURNAL_ID="{{ bugout_journal_id }}"'
-    - name: Replace BUGOUT_GITMONITOR_ENTRY_ID in .env
-      become: yes
-      lineinfile:
-        path: /etc/gitmonitor/.env
-        regexp: 'BUGOUT_GITMONITOR_ENTRY_ID=""'
-        line: 'BUGOUT_GITMONITOR_ENTRY_ID="{{ bugout_entry_id }}"'
     # Prepare gitmonitor service
     - name: Copy gitmonitor.service file
       become: yes

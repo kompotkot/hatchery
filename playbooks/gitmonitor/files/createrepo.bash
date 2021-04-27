@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
-server_ssh_keys_path="/home/ubuntu/.ssh"
-server_ssh_git_key="$server_ssh_keys_path/home_internal_id_rsa"
-server_ip="192.168.1.85"
+server_ssh_git_key="$2"
+server_ip="$1"
 
 read -p "How to call new repository: " repo_name
 
