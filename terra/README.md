@@ -42,3 +42,13 @@ terraform destroy
 
 - Apply `cdn/main.tf`
 - Apply `lambda/main.tf`
+
+
+### Pack lambda function
+
+```bash
+cd .venv/lib/python3.8/site-packages
+zip -r9 "lambda_function.zip" .
+cd files/api
+zip -g ../../lambda_function.zip -r .
+```
