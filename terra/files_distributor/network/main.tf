@@ -1,49 +1,34 @@
+# Main
+# VPC, Gateway, Subnets, Route tables,
+# Elastic IP for file destribution infrastructure
+
 provider "aws" {
   region = var.region
 }
 
-# VPC
-resource "aws_vpc" "vpc_hatchery" {
-  cidr_block = var.vpc_cidr_block
+module "vpc" {
+  source = "./modules/vpc"
 
-  tags = {
-    Name     = var.vpc_name
-    Resource = var.tag_resource
-  }
-}
+  vpc_cidr_block = var.vpc_cidr_block
+  vpc_name       = var.vpc_name
+  tag_resource   = var.tag_resource
 
-# Internet gateway
-resource "aws_internet_gateway" "igw_hatchery" {
-  vpc_id = aws_vpc.vpc_hatchery.id
-
-  tags = {
-    Name     = var.igw_name
-    Resource = var.tag_resource
-  }
+  igw_name = var.igw_name
 }
 
 # Subnets
-resource "aws_subnet" "sbn_hatchery_public" {
-  vpc_id     = aws_vpc.vpc_hatchery.id
-  cidr_block = var.sbn_cidr_block_public
+module "subnet" {
+  source = "./modules/subnet"
 
-  map_public_ip_on_launch = true
+  vpc_id = module.vpc.hatchery_vpc_id
 
-  tags = {
-    Name     = var.sbn_name_public
-    Resource = var.tag_resource
-    Access   = "public"
-  }
-}
-resource "aws_subnet" "sbn_hatchery_private" {
-  vpc_id     = aws_vpc.vpc_hatchery.id
-  cidr_block = var.sbn_cidr_block_private
+  sbn_cidr_block_public  = var.sbn_cidr_block_public
+  sbn_cidr_block_private = var.sbn_cidr_block_private
 
-  tags = {
-    Name     = var.sbn_name_private
-    Resource = var.tag_resource
-    Access   = "private"
-  }
+  sbn_name_public  = var.sbn_name_public
+  sbn_name_private = var.sbn_name_private
+
+  tag_resource = var.tag_resource
 }
 
 # Elastic IP
@@ -54,7 +39,7 @@ resource "aws_eip" "eip_nat_hatchery" {
 # NAT gateway
 resource "aws_nat_gateway" "ngw_hatchery" {
   allocation_id = aws_eip.eip_nat_hatchery.id
-  subnet_id     = aws_subnet.sbn_hatchery_public.id
+  subnet_id     = module.subnet.hatchery_sbn_public_id
 
   tags = {
     Name     = var.ngw_name
@@ -62,43 +47,17 @@ resource "aws_nat_gateway" "ngw_hatchery" {
   }
 }
 
-# Route table (public)
-resource "aws_route_table" "rt_hatchery_public" {
-  vpc_id = aws_vpc.vpc_hatchery.id
+# Route table
+module "route_table" {
+  source = "./modules/route_table"
 
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.igw_hatchery.id
-  }
+  vpc_id              = module.vpc.hatchery_vpc_id
+  internet_gateway_id = module.vpc.hatchery_internet_gateway_id
+  nat_gateway_id      = aws_nat_gateway.ngw_hatchery.id
 
-  tags = {
-    Name     = var.rt_name_public
-    Resource = var.tag_resource
-    Access   = "public"
-  }
-}
-resource "aws_route_table_association" "rt_a_hatchery_public" {
-  subnet_id      = aws_subnet.sbn_hatchery_public.id
-  route_table_id = aws_route_table.rt_hatchery_public.id
-}
+  rt_name_public  = var.rt_name_public
+  rt_name_private = var.rt_name_private
 
-# Route table (private)
-resource "aws_route_table" "rt_hatchery_private" {
-  vpc_id = aws_vpc.vpc_hatchery.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_nat_gateway.ngw_hatchery.id
-  }
-
-  tags = {
-    Name     = var.rt_name_private
-    Resource = var.tag_resource
-    Access   = "private"
-  }
-}
-
-resource "aws_route_table_association" "rt_a_hatchery_private" {
-  subnet_id      = aws_subnet.sbn_hatchery_private.id
-  route_table_id = aws_route_table.rt_hatchery_private.id
+  hatchery_sbn_public_id  = module.subnet.hatchery_sbn_public_id
+  hatchery_sbn_private_id = module.subnet.hatchery_sbn_private_id
 }

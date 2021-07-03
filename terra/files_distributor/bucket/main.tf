@@ -1,4 +1,6 @@
-# File destribution infrastructure
+# Main
+# S3 bucket, IAM role, Lamda function for 
+# file destribution infrastructure
 
 provider "aws" {
   region = var.region
