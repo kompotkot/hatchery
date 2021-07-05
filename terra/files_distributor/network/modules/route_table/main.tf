@@ -1,7 +1,7 @@
 # Route table main
 
 resource "aws_route_table" "rt_hatchery_public" {
-  vpc_id = var.vpc_id
+  vpc_id = var.hatchery_vpc_id
 
   route {
     cidr_block = "0.0.0.0/0"
@@ -21,7 +21,7 @@ resource "aws_route_table_association" "rt_a_hatchery_public" {
 }
 
 resource "aws_route_table" "rt_hatchery_private" {
-  vpc_id = module.hatchery_vpc_id
+  vpc_id = var.hatchery_vpc_id
 
   route {
     cidr_block = "0.0.0.0/0"

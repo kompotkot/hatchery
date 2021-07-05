@@ -23,10 +23,9 @@ module "subnet" {
   vpc_id = module.vpc.hatchery_vpc_id
 
   sbn_cidr_block_public  = var.sbn_cidr_block_public
+  sbn_name_public        = var.sbn_name_public
   sbn_cidr_block_private = var.sbn_cidr_block_private
-
-  sbn_name_public  = var.sbn_name_public
-  sbn_name_private = var.sbn_name_private
+  sbn_name_private       = var.sbn_name_private
 
   tag_resource = var.tag_resource
 }
@@ -51,7 +50,7 @@ resource "aws_nat_gateway" "ngw_hatchery" {
 module "route_table" {
   source = "./modules/route_table"
 
-  vpc_id              = module.vpc.hatchery_vpc_id
+  hatchery_vpc_id     = module.vpc.hatchery_vpc_id
   internet_gateway_id = module.vpc.hatchery_internet_gateway_id
   nat_gateway_id      = aws_nat_gateway.ngw_hatchery.id
 
@@ -60,4 +59,6 @@ module "route_table" {
 
   hatchery_sbn_public_id  = module.subnet.hatchery_sbn_public_id
   hatchery_sbn_private_id = module.subnet.hatchery_sbn_private_id
+
+  tag_resource = var.tag_resource
 }
