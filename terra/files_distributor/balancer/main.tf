@@ -2,6 +2,9 @@
 # Load Balancer, Security group for 
 # file destribution infrastructure
 
+
+# TODO: Lost listener 80 port
+
 provider "aws" {
   region = var.region
 }

@@ -36,3 +36,14 @@ resource "aws_lb_target_group_attachment" "hatchery_lb_tg_lambda_attachment" {
   target_id        = var.hatchery_lambda_arn
   depends_on       = [aws_lambda_permission.hatchery_with_lb]
 }
+
+resource "aws_lb_listener" "hatchery_lb_listener" {
+  load_balancer_arn = aws_lb.hatchery_lb.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.hatchery_tg_lambda.arn
+  }
+}
