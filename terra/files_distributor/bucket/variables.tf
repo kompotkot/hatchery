@@ -10,8 +10,14 @@ variable "tag_resource" {
 }
 
 # S3 bucket
-variable "s3_bucket_name" {
-  default = "hatchery_files"
+variable "s3_bucket_files_name" {
+  default = "hatchery-files"
+}
+variable "s3_bucket_sources_name" {
+  default = "hatchery-sources"
+}
+variable "source_code_zip" {
+  default = "lambda_function.zip"
 }
 
 # IAM role
