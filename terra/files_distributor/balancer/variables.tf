@@ -10,6 +10,9 @@ variable "tag_resource" {
 }
 
 variable "hatchery_vpc_id" {}
+variable "hatchery_sbn_public_a_id" {}
+variable "hatchery_sbn_public_b_id" {}
+variable "hatchery_lambda_arn" {}
 
 # Security Group
 variable "sg_name" {
@@ -23,5 +26,3 @@ variable "sg_description" {
 variable "lb_name" {
   default = "hatchery-files-distributor-lb"
 }
-variable "hatchery_sbn_public_id" {}
-variable "hatchery_lambda_arn" {}

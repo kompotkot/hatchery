@@ -24,19 +24,26 @@ variable "igw_name" {
 }
 
 # Subnet
-variable "sbn_cidr_block_public" {
+variable "sbn_cidr_block_public_a" {
   description = "Subnet IPv4 address range"
   default     = "10.0.11.0/24"
 }
-variable "sbn_cidr_block_private" {
+variable "sbn_name_public_a" {
+  default = "sbn_hatchery_public_a"
+}
+variable "sbn_cidr_block_public_b" {
+  description = "Subnet IPv4 address range"
+  default     = "10.0.12.0/24"
+}
+variable "sbn_name_public_b" {
+  default = "sbn_hatchery_public_b"
+}
+variable "sbn_cidr_block_private_a" {
   description = "Subnet IPv4 address range"
   default     = "10.0.21.0/24"
 }
-variable "sbn_name_public" {
-  default = "sbn_hatchery_public"
-}
-variable "sbn_name_private" {
-  default = "sbn_hatchery_private"
+variable "sbn_name_private_a" {
+  default = "sbn_hatchery_private_a"
 }
 
 # NAT Gateway

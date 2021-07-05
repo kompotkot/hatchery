@@ -56,6 +56,7 @@ zip -g ../../lambda_function.zip -r .
 ```
 terraform apply \
     -var hatchery_vpc_id=$AWS_HATCHERY_VPC_ID \
-    -var hatchery_sbn_public_id=$AWS_HATCHERY_SUBNET_PUBLIC_ID \
+    -var hatchery_sbn_public_a_id=$AWS_HATCHERY_SUBNET_PUBLIC_A_ID \
+    -var hatchery_sbn_public_b_id=$AWS_HATCHERY_SUBNET_PUBLIC_B_ID \
     -var hatchery_lambda_arn=$AWS_HATCHERY_LAMBDA_ARN
 ```

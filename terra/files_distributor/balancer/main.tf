@@ -23,6 +23,7 @@ module "load_balancer" {
   tag_resource = var.tag_resource
 
   hatchery_lambda_arn        = var.hatchery_lambda_arn
-  hatchery_sbn_public_id     = var.hatchery_sbn_public_id
+  hatchery_sbn_public_a_id     = var.hatchery_sbn_public_a_id
+  hatchery_sbn_public_b_id     = var.hatchery_sbn_public_b_id
   hatchery_security_group_id = module.security_group.hatchery_security_group_id
 }

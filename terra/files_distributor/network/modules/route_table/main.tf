@@ -15,8 +15,12 @@ resource "aws_route_table" "rt_hatchery_public" {
   }
 }
 
-resource "aws_route_table_association" "rt_a_hatchery_public" {
-  subnet_id      = var.hatchery_sbn_public_id
+resource "aws_route_table_association" "rt_a_hatchery_public_a" {
+  subnet_id      = var.hatchery_sbn_public_a_id
+  route_table_id = aws_route_table.rt_hatchery_public.id
+}
+resource "aws_route_table_association" "rt_a_hatchery_public_b" {
+  subnet_id      = var.hatchery_sbn_public_b_id
   route_table_id = aws_route_table.rt_hatchery_public.id
 }
 
@@ -35,7 +39,7 @@ resource "aws_route_table" "rt_hatchery_private" {
   }
 }
 
-resource "aws_route_table_association" "rt_a_hatchery_private" {
-  subnet_id      = var.hatchery_sbn_private_id
+resource "aws_route_table_association" "rt_a_hatchery_private_a" {
+  subnet_id      = var.hatchery_sbn_private_a_id
   route_table_id = aws_route_table.rt_hatchery_private.id
 }

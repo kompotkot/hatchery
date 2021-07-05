@@ -22,10 +22,12 @@ module "subnet" {
 
   vpc_id = module.vpc.hatchery_vpc_id
 
-  sbn_cidr_block_public  = var.sbn_cidr_block_public
-  sbn_name_public        = var.sbn_name_public
-  sbn_cidr_block_private = var.sbn_cidr_block_private
-  sbn_name_private       = var.sbn_name_private
+  sbn_cidr_block_public_a  = var.sbn_cidr_block_public_a
+  sbn_name_public_a        = var.sbn_name_public_a
+  sbn_cidr_block_public_b  = var.sbn_cidr_block_public_b
+  sbn_name_public_b        = var.sbn_name_public_b
+  sbn_cidr_block_private_a = var.sbn_cidr_block_private_a
+  sbn_name_private_a       = var.sbn_name_private_a
 
   tag_resource = var.tag_resource
 }
@@ -38,7 +40,7 @@ resource "aws_eip" "eip_nat_hatchery" {
 # NAT gateway
 resource "aws_nat_gateway" "ngw_hatchery" {
   allocation_id = aws_eip.eip_nat_hatchery.id
-  subnet_id     = module.subnet.hatchery_sbn_public_id
+  subnet_id     = module.subnet.hatchery_sbn_public_a_id
 
   tags = {
     Name     = var.ngw_name
@@ -57,8 +59,9 @@ module "route_table" {
   rt_name_public  = var.rt_name_public
   rt_name_private = var.rt_name_private
 
-  hatchery_sbn_public_id  = module.subnet.hatchery_sbn_public_id
-  hatchery_sbn_private_id = module.subnet.hatchery_sbn_private_id
+  hatchery_sbn_public_a_id  = module.subnet.hatchery_sbn_public_a_id
+  hatchery_sbn_public_b_id  = module.subnet.hatchery_sbn_public_b_id
+  hatchery_sbn_private_a_id = module.subnet.hatchery_sbn_private_a_id
 
   tag_resource = var.tag_resource
 }
