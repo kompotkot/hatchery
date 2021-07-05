@@ -52,3 +52,10 @@ zip -r9 "lambda_function.zip" .
 cd files/api
 zip -g ../../lambda_function.zip -r .
 ```
+
+```
+terraform apply \
+    -var hatchery_vpc_id=$AWS_HATCHERY_VPC_ID \
+    -var hatchery_sbn_public_id=$AWS_HATCHERY_SUBNET_PUBLIC_ID \
+    -var hatchery_lambda_arn=$AWS_HATCHERY_LAMBDA_ARN
+```
