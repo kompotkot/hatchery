@@ -2,6 +2,7 @@ import base64
 import boto3
 from cgi import parse_multipart, parse_header
 from datetime import datetime
+import json
 from io import BytesIO
 from uuid import uuid4, UUID
 
@@ -88,37 +89,53 @@ def lambda_handler(event, context):
         if len(path_list) == 6:
             # Get image
             image_id = path_list[5]
-            image_params = {"id": image_id}
             try:
-                resource = make_request(
+                encoded_image = get_image_from_bucket(journal_id, entry_id, image_id)
+                return {
+                    "statusCode": 200,
+                    "headers": {"Content-Type": "image/png"},
+                    "body": encoded_image,
+                    "isBase64Encoded": True,
+                }
+            except Exception:
+                print(f"Error due retrieving image with id: {image_id} from bucket")
+                return {"statusCode": 500}
+
+        elif len(path_list) == 5:
+            # List images for entry
+            image_params = {
+                "application_id": BUGOUT_APPLICATION_ID,
+                "journal_id": journal_id,
+                "entry_id": entry_id,
+            }
+            try:
+                resources = make_request(
                     method="GET",
                     url=resources_url,
                     headers={"authorization": auth_bearer_header},
                     params=image_params,
                 )
-                try:
-                    image = get_image_from_bucket(journal_id, entry_id, image_id)
-                    return {"statusCode": 200, "body": image}
-                except Exception:
-                    print(f"Error due retrieving image with id: {image_id} from bucket")
-                    return {"statusCode": 500}
+                resources_data = [
+                    {
+                        "id": resource["resource_data"]["id"],
+                        "journal_id": resource["resource_data"]["journal_id"],
+                        "entry_id": resource["resource_data"]["entry_id"],
+                        "name": resource["resource_data"]["name"],
+                        "extension": resource["resource_data"]["extension"],
+                        "created_at": resource["resource_data"]["created_at"],
+                    }
+                    for resource in resources["resources"]
+                ]
+                return {
+                    "statusCode": 200,
+                    "headers": {"Content-Type": "application/json"},
+                    "body": json.dumps(resources_data),
+                }
             except Exception:
-                return {"statusCode": 404}
-
-        elif len(path_list) == 5:
-            # List images for entry
-            # TODO: Call to spire, to check permissions and use image_id instead of name
-            image_name = params["image_name"]
-
-            encoded_image = get_image_from_bucket(
-                journal_id=journal_id, entry_id=entry_id, image_name=image_name
-            )
-            return {
-                "headers": {"Content-Type": "image/png"},
-                "statusCode": 200,
-                "body": encoded_image,
-                "isBase64Encoded": True,
-            }
+                print(
+                    f"Error due retrieving resources for journal with id: {journal_id} and entry with id: {entry_id}"
+                )
+                return {"statusCode": 500}
         else:
             return {"statusCode": 404}
 
@@ -129,7 +146,7 @@ def lambda_handler(event, context):
         image_extension = params["image_extension"]
 
         # Create new resource record
-        json = {
+        json_data = {
             "application_id": BUGOUT_APPLICATION_ID,
             "resource_data": {
                 "id": str(image_id),
@@ -145,7 +162,7 @@ def lambda_handler(event, context):
                 method="POST",
                 url=resources_url,
                 headers={"authorization": auth_bearer_header},
-                json=json,
+                json=json_data,
             )
             try:
                 body_raw = event["body"]
@@ -157,6 +174,10 @@ def lambda_handler(event, context):
                     decoded_body=decoded_body,
                     headers=headers,
                 )
+                return {
+                    "statusCode": 200,
+                    "body": json.dumps(resource["resource_data"]),
+                }
             except Exception:
                 print(
                     f"Error due saving resource with id: {resource['id']} image with id: {str(image_id)} to bucket"
