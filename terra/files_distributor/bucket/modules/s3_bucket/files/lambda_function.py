@@ -12,24 +12,34 @@ BUGOUT_SPIRE_URL = "https://spire.bugout.dev"
 BUGOUT_BROOD_URL = "https://auth.bugout.dev"
 BUGOUT_FILES_S3_BUCKET_NAME = "hatchery-files"
 BUGOUT_FILES_S3_BUCKET_PREFIX = "dev"
-BUGOUT_APPLICATION_ID = "0270c582-f3be-4658-af78-44a3647cb2a1"
+BUGOUT_APPLICATION_ID = "a218415d-0431-44c5-bc0f-c7b2319c62fd"
 
 
 s3 = boto3.client("s3")
 
 
-def make_request(method: str, url: str, **kwargs):
-    response_body = None
+class BugoutResponseException(Exception):
+    def __init__(self, message, status_code, detail=None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        if detail is not None:
+            self.detail = detail
+
+
+def make_request(method: str, url: str, **kwargs) -> dict:
     try:
         r = requests.request(method, url=url, **kwargs)
         r.raise_for_status()
         response_body = r.json()
-    except Exception:
-        raise Exception()
+    except requests.exceptions.RequestException as err:
+        raise BugoutResponseException(err, status_code=r.status_code, detail=r.reason)
+    except Exception as err:
+        raise Exception("Unexpected error occurred due calling to Bugout API")
+
     return response_body
 
 
-def get_image_from_bucket(journal_id: str, entry_id: str, image_id: str) -> str:
+def get_image_from_bucket(journal_id: str, entry_id: str, image_id: str) -> bytes:
     image_path = f"{BUGOUT_FILES_S3_BUCKET_PREFIX}/{journal_id}/entries/{entry_id}/images/{image_id}"
     response = s3.get_object(Bucket=BUGOUT_FILES_S3_BUCKET_NAME, Key=image_path)
     image = response["Body"].read()
@@ -62,11 +72,6 @@ def put_image_to_bucket(
 
 
 def lambda_handler(event, context):
-    method = event["httpMethod"]
-    params = event["queryStringParameters"]
-    headers = event["headers"]
-    auth_bearer_header = headers["authorization"]
-
     path = event["path"]
     path_list = path.lstrip("/").rstrip("/").split("/")
     try:
@@ -79,13 +84,21 @@ def lambda_handler(event, context):
         return {"statusCode": 404}
 
     # Check access permissions
+    headers = event["headers"]
+    auth_bearer_header = headers["authorization"]
     try:
         entry_url = f"{BUGOUT_SPIRE_URL}/journals/{journal_id}/entries/{entry_id}"
         make_request(
             method="GET", url=entry_url, headers={"authorization": auth_bearer_header}
         )
-    except Exception:
-        return {"statusCode": 403}
+    except BugoutResponseException as err:
+        return {"statusCode": err.status_code, "body": err.detail}
+    except Exception as err:
+        print(err)
+        return {"statusCode": 500}
+
+    method = event["httpMethod"]
+    params = event["queryStringParameters"]
 
     resources_url = f"{BUGOUT_BROOD_URL}/resources/"
     image_params = {
@@ -96,8 +109,8 @@ def lambda_handler(event, context):
 
     # Download image
     if method == "GET":
+        # Get image
         if len(path_list) == 6:
-            # Get image
             image_id = path_list[5]
             try:
                 encoded_image = get_image_from_bucket(journal_id, entry_id, image_id)
@@ -107,12 +120,13 @@ def lambda_handler(event, context):
                     "body": encoded_image,
                     "isBase64Encoded": True,
                 }
-            except Exception:
+            except Exception as err:
                 print(f"Error due retrieving image with id: {image_id} from bucket")
+                print(err)
                 return {"statusCode": 500}
 
+        # List images for entry
         elif len(path_list) == 5:
-            # List images for entry
             try:
                 resources = make_request(
                     method="GET",
@@ -135,14 +149,17 @@ def lambda_handler(event, context):
                     "headers": {"Content-Type": "application/json"},
                     "body": json.dumps(resources_data),
                 }
-            except Exception:
+            except BugoutResponseException as err:
+                return {"statusCode": err.status_code, "body": err.detail}
+            except Exception as err:
                 print(
-                    f"Error due retrieving resources for journal with id: {journal_id} and entry with id: {entry_id}"
+                    f"Error due list resources for journal with id: {journal_id} and entry with id: {entry_id}"
                 )
+                print(err)
                 return {"statusCode": 500}
 
+    # Upload image to S3 bucket
     elif method == "POST":
-        # Upload image to S3 bucket
         image_id = uuid4()
         image_name = params["image_name"]
         json_data = {
@@ -176,18 +193,24 @@ def lambda_handler(event, context):
                     "statusCode": 200,
                     "body": json.dumps(resource["resource_data"]),
                 }
-            except Exception:
+            except Exception as err:
                 print(
-                    f"Error due saving resource with id: {resource['id']} image with id: {str(image_id)} to bucket"
+                    f"Error due saving image with id: {str(image_id)} for resource with id: {resource['id']} to bucket"
                 )
+                print(err)
                 return {"statusCode": 500}
-        except Exception:
-            print(f"Error due creating resource")
-            return {"statusCode": 403}
+        except BugoutResponseException as err:
+            return {"statusCode": err.status_code, "body": err.detail}
+        except Exception as err:
+            print(
+                f"Error due creating resource for journal with id: {journal_id} and entry with id: {entry_id}"
+            )
+            print(err)
+            return {"statusCode": 500}
 
+    # Delete image
     elif method == "DELETE":
         if len(path_list) == 6:
-            # Delete image
             image_id = path_list[5]
             try:
                 params.update({"id": image_id})
@@ -197,32 +220,35 @@ def lambda_handler(event, context):
                     headers={"authorization": auth_bearer_header},
                     params=image_params,
                 )
-                if len(resources["resources"]) != 1:
-                    print(
-                        f"Resource for image with id: {image_id} not found, or server error occurred"
-                    )
-                    return {"statusCode": 404}
-                resource = resources[0]
+                assert str(resources["resources"][0]["resource_data"]["id"]) == image_id
+                resource = resources["resources"][0]
                 try:
                     make_request(
                         method="DELETE",
                         url=f"{resources_url}{resource['id']}",
                         headers={"authorization": auth_bearer_header},
                     )
-                except Exception:
+                except BugoutResponseException as err:
+                    return {"statusCode": err.status_code, "body": err.detail}
+                except Exception as err:
                     print(f"Error due deleting resource with id: {resource['id']}")
+                    print(err)
                     return {"statusCode": 500}
                 try:
                     delete_image_from_bucket(journal_id, entry_id, image_id)
-                except Exception:
+                except Exception as err:
                     print(f"Error due deleting image with id: {image_id} from bucket")
+                    print(err)
                     return {"statusCode": 500}
                 return {
                     "statusCode": 200,
                     "body": json.dumps(resource["resource_data"]),
                 }
-            except Exception:
+            except BugoutResponseException as err:
+                return {"statusCode": err.status_code, "body": err.detail}
+            except Exception as err:
                 print(f"Resource for image with id: {image_id} not found")
-                return {"statusCode": 404}
+                print(err)
+                return {"statusCode": 500}
 
     return {"statusCode": 404}
