@@ -56,12 +56,14 @@ def put_image_to_bucket(
     journal_id: str,
     entry_id: str,
     image_id: UUID,
+    content_type: str,
+    content_length: int,
     decoded_body: bytes,
-    headers: dict,
-) -> None:
-    _, c_data = parse_header(headers["content-type"])
+) -> bool:
+    _, c_data = parse_header(content_type)
     c_data["boundary"] = bytes(c_data["boundary"], "utf-8")
-    c_data["CONTENT-LENGTH"] = headers["content-length"]
+    c_data["CONTENT-LENGTH"] = content_length
+
     form_data = parse_multipart(BytesIO(decoded_body), c_data)
 
     for image_str in form_data["file"]:
@@ -69,6 +71,7 @@ def put_image_to_bucket(
         s3.put_object(
             Body=image_str, Bucket=BUGOUT_FILES_S3_BUCKET_NAME, Key=image_path
         )
+    return
 
 
 def lambda_handler(event, context):
@@ -113,6 +116,7 @@ def lambda_handler(event, context):
         if len(path_list) == 6:
             image_id = path_list[5]
             try:
+                # TODO(kompotkot): Add check resource and also get image name
                 encoded_image = get_image_from_bucket(journal_id, entry_id, image_id)
                 return {
                     "statusCode": 200,
@@ -134,16 +138,18 @@ def lambda_handler(event, context):
                     headers={"authorization": auth_bearer_header},
                     params=image_params,
                 )
-                resources_data = [
-                    {
-                        "id": resource["resource_data"]["id"],
-                        "journal_id": resource["resource_data"]["journal_id"],
-                        "entry_id": resource["resource_data"]["entry_id"],
-                        "name": resource["resource_data"]["name"],
-                        "created_at": resource["resource_data"]["created_at"],
-                    }
-                    for resource in resources["resources"]
-                ]
+                resources_data = {
+                    "images": [
+                        {
+                            "id": resource["resource_data"]["id"],
+                            "journal_id": resource["resource_data"]["journal_id"],
+                            "entry_id": resource["resource_data"]["entry_id"],
+                            "name": resource["resource_data"]["name"],
+                            "created_at": resource["resource_data"]["created_at"],
+                        }
+                        for resource in resources["resources"]
+                    ]
+                }
                 return {
                     "statusCode": 200,
                     "headers": {"Content-Type": "application/json"},
@@ -180,14 +186,24 @@ def lambda_handler(event, context):
                 json=json_data,
             )
             try:
+                content_type = headers["content-type"]
                 body_raw = event["body"]
                 decoded_body = base64.b64decode(body_raw)
+                try:
+                    content_length = headers["content-length"]
+                except Exception:
+                    content_length = len(decoded_body)
+                if content_length > 5500000:
+                    print("Image too large")
+                    return {"statusCode": 406}
+
                 put_image_to_bucket(
                     journal_id=journal_id,
                     entry_id=entry_id,
                     image_id=image_id,
+                    content_type=content_type,
+                    content_length=content_length,
                     decoded_body=decoded_body,
-                    headers=headers,
                 )
                 return {
                     "statusCode": 200,
@@ -213,7 +229,7 @@ def lambda_handler(event, context):
         if len(path_list) == 6:
             image_id = path_list[5]
             try:
-                params.update({"id": image_id})
+                image_params.update({"id": image_id})
                 resources = make_request(
                     method="GET",
                     url=resources_url,
