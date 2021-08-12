@@ -76,6 +76,8 @@ def put_image_to_bucket(
 
 def lambda_handler(event, context):
     path = event["path"]
+    if path == "/ping":
+        return {"statusCode": 200, "body": json.dumps({"status": "ok"})}
     path_list = path.lstrip("/").rstrip("/").split("/")
     try:
         assert path_list[0] == "files"
@@ -116,16 +118,40 @@ def lambda_handler(event, context):
         if len(path_list) == 6:
             image_id = path_list[5]
             try:
-                # TODO(kompotkot): Add check resource and also get image name
-                encoded_image = get_image_from_bucket(journal_id, entry_id, image_id)
-                return {
-                    "statusCode": 200,
-                    "headers": {"Content-Type": "image/png"},
-                    "body": encoded_image,
-                    "isBase64Encoded": True,
-                }
+                image_params.update({"id": image_id})
+                resources = make_request(
+                    method="GET",
+                    url=resources_url,
+                    headers={"authorization": auth_bearer_header},
+                    params=image_params,
+                )
+                assert str(resources["resources"][0]["resource_data"]["id"]) == image_id
+                resource = resources["resources"][0]
+                image_name = resource["resource_data"]["name"]
+                image_extension = resource["resource_data"]["extension"]
+                try:
+                    encoded_image = get_image_from_bucket(
+                        journal_id, entry_id, image_id
+                    )
+                    return {
+                        "statusCode": 200,
+                        "headers": {
+                            "Content-Type": f"image/{image_extension}"
+                            if image_extension != "jpg"
+                            else "image/jpeg",
+                            "x-bugout-image-fullname": f"{image_name}.{image_extension}",
+                        },
+                        "body": encoded_image,
+                        "isBase64Encoded": True,
+                    }
+                except Exception as err:
+                    print(f"Error due retrieving image with id: {image_id} from bucket")
+                    print(err)
+                    return {"statusCode": 500}
+            except BugoutResponseException as err:
+                return {"statusCode": err.status_code, "body": err.detail}
             except Exception as err:
-                print(f"Error due retrieving image with id: {image_id} from bucket")
+                print(f"Error due retrieving image with id: {image_id} from resource")
                 print(err)
                 return {"statusCode": 500}
 
@@ -145,6 +171,7 @@ def lambda_handler(event, context):
                             "journal_id": resource["resource_data"]["journal_id"],
                             "entry_id": resource["resource_data"]["entry_id"],
                             "name": resource["resource_data"]["name"],
+                            "extension": resource["resource_data"]["extension"],
                             "created_at": resource["resource_data"]["created_at"],
                         }
                         for resource in resources["resources"]
@@ -167,7 +194,21 @@ def lambda_handler(event, context):
     # Upload image to S3 bucket
     elif method == "POST":
         image_id = uuid4()
-        image_name = params["image_name"]
+        image_fullname = params["image_name"]
+        image_fullname_list = image_fullname.split(".")
+        if len(image_fullname_list) < 2:
+            return {
+                "statusCode": 406,
+                "body": json.dumps({"error": "Unacceptable image name"}),
+            }
+        image_name = "_".join(image_fullname_list[:-1]).lower()
+        image_extension = image_fullname_list[-1].lower()
+        if image_extension not in ["png", "jpg", "jpeg", "bmp", "gif"]:
+            return {
+                "statusCode": 406,
+                "body": json.dumps({"error": "Unacceptable image extension"}),
+            }
+
         json_data = {
             "application_id": BUGOUT_APPLICATION_ID,
             "resource_data": {
@@ -175,6 +216,7 @@ def lambda_handler(event, context):
                 "entry_id": entry_id,
                 "journal_id": journal_id,
                 "name": image_name,
+                "extension": image_extension,
                 "created_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f"),
             },
         }
