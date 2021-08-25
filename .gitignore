@@ -16,6 +16,18 @@
 # End of https://www.toptal.com/developers/gitignore/api/vscode,ansible
 
 # Custom
-.hatchery/*
-tests/*
+.venv
+tests
+.secrets
+.hatchery
+prod.env
+
+# Ansible
 machines.ini
+
+# Terraform
+.terraform
+terraform.tfstate
+terraform.tfstate.backup
+.terraform.lock.hcl
+.terraform.tfstate.lock.info
