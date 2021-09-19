@@ -60,7 +60,7 @@ def put_image_to_bucket(
     content_type: str,
     content_length: int,
     decoded_body: bytes,
-) -> bool:
+) -> None:
     _, c_data = parse_header(content_type)
     c_data["boundary"] = bytes(c_data["boundary"], "utf-8")
     c_data["CONTENT-LENGTH"] = content_length
@@ -72,7 +72,6 @@ def put_image_to_bucket(
         s3.put_object(
             Body=image_str, Bucket=BUGOUT_FILES_S3_BUCKET_NAME, Key=image_path
         )
-    return
 
 
 def lambda_handler(event, context):
@@ -232,13 +231,14 @@ def lambda_handler(event, context):
                 content_type = headers["content-type"]
                 body_raw = event["body"]
                 decoded_body = base64.b64decode(body_raw)
+                body_length = len(decoded_body)
+                if body_length > 5500000:
+                    print("Image too large")
+                    return {"statusCode": 406}
                 try:
                     content_length = headers["content-length"]
                 except Exception:
-                    content_length = len(decoded_body)
-                if content_length > 5500000:
-                    print("Image too large")
-                    return {"statusCode": 406}
+                    content_length = body_length
 
                 put_image_to_bucket(
                     journal_id=journal_id,
