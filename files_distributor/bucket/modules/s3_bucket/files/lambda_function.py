@@ -4,15 +4,16 @@ from cgi import parse_multipart, parse_header
 from datetime import datetime
 import json
 from io import BytesIO
+import os
 from uuid import uuid4, UUID
 
 import requests
 
-BUGOUT_SPIRE_URL = "https://spire.bugout.dev"
-BUGOUT_BROOD_URL = "https://auth.bugout.dev"
-BUGOUT_FILES_S3_BUCKET_NAME = "hatchery-files"
+MY_APP_JOURNALS_URL = "https://api.example.com"
+BUGOUT_AUTH_URL = "https://auth.bugout.dev"
+BUGOUT_FILES_S3_BUCKET_NAME = "myapp-files"
 BUGOUT_FILES_S3_BUCKET_PREFIX = "dev"
-BUGOUT_APPLICATION_ID = "a218415d-0431-44c5-bc0f-c7b2319c62fd"
+BUGOUT_APPLICATION_ID = os.environ.get("BUGOUT_FILES_APPLICATION_ID")
 
 
 s3 = boto3.client("s3")
@@ -92,7 +93,7 @@ def lambda_handler(event, context):
     headers = event["headers"]
     auth_bearer_header = headers["authorization"]
     try:
-        entry_url = f"{BUGOUT_SPIRE_URL}/journals/{journal_id}/entries/{entry_id}"
+        entry_url = f"{MY_APP_JOURNALS_URL}/journals/{journal_id}/entries/{entry_id}"
         make_request(
             method="GET", url=entry_url, headers={"authorization": auth_bearer_header}
         )
@@ -105,7 +106,7 @@ def lambda_handler(event, context):
     method = event["httpMethod"]
     params = event["queryStringParameters"]
 
-    resources_url = f"{BUGOUT_BROOD_URL}/resources/"
+    resources_url = f"{BUGOUT_AUTH_URL}/resources/"
     image_params = {
         "application_id": BUGOUT_APPLICATION_ID,
         "journal_id": journal_id,

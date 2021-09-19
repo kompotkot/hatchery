@@ -1,8 +1,18 @@
 # hatchery
 
-Prepare instance:
-* Add NOPASSWD to visudo `%sudo   ALL=(ALL) NOPASSWD:ALL`
-* Prepare access with ssh key
+## Content
+
+-   `files_distributor` - AWS lambda serverless application to store files
+-   `gitmonitor` - Setup of personal Git server with monitoring via journal at Bugout.dev
+-   `initial` - common playbooks to deploy server
+
+## Initial installation
+
+Prepare instance for ansible playbook:
+
+-   Add NOPASSWD to visudo `%sudo ALL=(ALL) NOPASSWD:ALL`
+-   Prepare access with ssh key
+-   Apply playbook
 
 ```bash
 ansible-playbook \
