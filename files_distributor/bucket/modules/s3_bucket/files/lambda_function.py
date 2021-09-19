@@ -11,7 +11,7 @@ import requests
 
 MY_APP_JOURNALS_URL = "https://api.example.com"
 BUGOUT_AUTH_URL = "https://auth.bugout.dev"
-BUGOUT_FILES_S3_BUCKET_NAME = "myapp-files"
+BUGOUT_FILES_S3_BUCKET_NAME = "hatchery-files"
 BUGOUT_FILES_S3_BUCKET_PREFIX = "dev"
 BUGOUT_APPLICATION_ID = os.environ.get("BUGOUT_FILES_APPLICATION_ID")
 
