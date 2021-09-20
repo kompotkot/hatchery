@@ -11,8 +11,8 @@ import requests
 
 MY_APP_JOURNALS_URL = "https://api.example.com"
 BUGOUT_AUTH_URL = "https://auth.bugout.dev"
-BUGOUT_FILES_S3_BUCKET_NAME = "hatchery-files"
-BUGOUT_FILES_S3_BUCKET_PREFIX = "dev"
+FILES_S3_BUCKET_NAME = "hatchery-files"
+FILES_S3_BUCKET_PREFIX = "dev"
 BUGOUT_APPLICATION_ID = os.environ.get("BUGOUT_FILES_APPLICATION_ID")
 
 
@@ -41,16 +41,16 @@ def make_request(method: str, url: str, **kwargs) -> dict:
 
 
 def get_image_from_bucket(journal_id: str, entry_id: str, image_id: str) -> bytes:
-    image_path = f"{BUGOUT_FILES_S3_BUCKET_PREFIX}/{journal_id}/entries/{entry_id}/images/{image_id}"
-    response = s3.get_object(Bucket=BUGOUT_FILES_S3_BUCKET_NAME, Key=image_path)
+    image_path = f"{FILES_S3_BUCKET_PREFIX}/{journal_id}/entries/{entry_id}/images/{image_id}"
+    response = s3.get_object(Bucket=FILES_S3_BUCKET_NAME, Key=image_path)
     image = response["Body"].read()
     encoded_image = base64.b64encode(image)
     return encoded_image
 
 
 def delete_image_from_bucket(journal_id: str, entry_id: str, image_id: str) -> None:
-    image_path = f"{BUGOUT_FILES_S3_BUCKET_PREFIX}/{journal_id}/entries/{entry_id}/images/{image_id}"
-    s3.delete_object(Bucket=BUGOUT_FILES_S3_BUCKET_NAME, Key=image_path)
+    image_path = f"{FILES_S3_BUCKET_PREFIX}/{journal_id}/entries/{entry_id}/images/{image_id}"
+    s3.delete_object(Bucket=FILES_S3_BUCKET_NAME, Key=image_path)
 
 
 def put_image_to_bucket(
@@ -68,9 +68,9 @@ def put_image_to_bucket(
     form_data = parse_multipart(BytesIO(decoded_body), c_data)
 
     for image_str in form_data["file"]:
-        image_path = f"{BUGOUT_FILES_S3_BUCKET_PREFIX}/{journal_id}/entries/{entry_id}/images/{str(image_id)}"
+        image_path = f"{FILES_S3_BUCKET_PREFIX}/{journal_id}/entries/{entry_id}/images/{str(image_id)}"
         s3.put_object(
-            Body=image_str, Bucket=BUGOUT_FILES_S3_BUCKET_NAME, Key=image_path
+            Body=image_str, Bucket=FILES_S3_BUCKET_NAME, Key=image_path
         )
 
 
